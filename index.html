@@ -117,6 +117,21 @@
       line-height: 1.5;
       margin-top: 8px;
     }
+
+    #installAppBtn {
+      position: fixed;
+      right: 16px;
+      bottom: 18px;
+      z-index: 9999;
+      width: auto;
+      min-width: 132px;
+      padding: 0 18px;
+      background: linear-gradient(135deg, #d9a441, #fff0a4);
+      color: #151515;
+      border: 1px solid rgba(255,255,255,0.35);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -171,6 +186,8 @@
     </section>
   </main>
 
+  <button id="installAppBtn" type="button">安裝 App</button>
+
   <script>
     const canvas = document.getElementById('coverCanvas');
     const ctx = canvas.getContext('2d');
@@ -183,6 +200,49 @@
     const frameColor = document.getElementById('frameColor');
     const resetBtn = document.getElementById('resetBtn');
     const downloadBtn = document.getElementById('downloadBtn');
+    const installAppBtn = document.getElementById('installAppBtn');
+
+    let deferredInstallPrompt = null;
+
+    function isRunningAsPWA() {
+      return window.matchMedia('(display-mode: standalone)').matches ||
+             window.matchMedia('(display-mode: fullscreen)').matches ||
+             window.navigator.standalone === true;
+    }
+
+    function updateInstallButton() {
+      installAppBtn.style.display = isRunningAsPWA() ? 'none' : 'block';
+    }
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      updateInstallButton();
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      installAppBtn.style.display = 'none';
+    });
+
+    installAppBtn.addEventListener('click', async () => {
+      if (isRunningAsPWA()) {
+        installAppBtn.style.display = 'none';
+        return;
+      }
+
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        updateInstallButton();
+        return;
+      }
+
+      alert('瀏覽器目前尚未提供安裝視窗。請用 Chrome 開啟本頁，稍後再按一次；若選單中已出現「安裝應用程式」，也可以直接使用該選項。');
+    });
+
+    updateInstallButton();
 
     const W = 1080;
     const H = 1920;
